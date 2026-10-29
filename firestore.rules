@@ -1,0 +1,142 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Global default-deny catch-all safety net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function isValidNote(data) {
+      return data.userId == request.auth.uid &&
+             data.title is string && data.title.size() >= 1 && data.title.size() <= 200 &&
+             data.content is string && data.content.size() <= 50000 &&
+             (!('category' in data) || (data.category is string && data.category.size() <= 50)) &&
+             (!('surahNumber' in data) || data.surahNumber is int) &&
+             (!('ayahStart' in data) || data.ayahStart is int) &&
+             (!('ayahEnd' in data) || data.ayahEnd is int) &&
+             (!('tags' in data) || (data.tags is list && data.tags.size() <= 20 && (data.tags.size() == 0 || data.tags[0] is string))) &&
+             (!('arabicSnippet' in data) || (data.arabicSnippet is string && data.arabicSnippet.size() <= 2000)) &&
+             (!('translationSnippet' in data) || (data.translationSnippet is string && data.translationSnippet.size() <= 2000)) &&
+             (!('mindMapId' in data) || (data.mindMapId is string && data.mindMapId.size() <= 128)) &&
+             data.createdAt is timestamp && data.createdAt <= request.time &&
+             data.updatedAt is timestamp && data.updatedAt <= request.time;
+    }
+
+    function isValidMindMap(data) {
+      return data.userId == request.auth.uid &&
+             data.title is string && data.title.size() >= 1 && data.title.size() <= 200 &&
+             (!('description' in data) || (data.description is string && data.description.size() <= 1000)) &&
+             (!('surahNumber' in data) || data.surahNumber is int) &&
+             data.nodesJson is string && data.nodesJson.size() <= 50000 &&
+             data.edgesJson is string && data.edgesJson.size() <= 50000 &&
+             data.createdAt is timestamp && data.createdAt <= request.time &&
+             data.updatedAt is timestamp && data.updatedAt <= request.time;
+    }
+
+    function isValidBookmark(data) {
+      return data.userId == request.auth.uid &&
+             data.surahNumber is int && data.surahNumber >= 1 && data.surahNumber <= 114 &&
+             data.ayahNumber is int && data.ayahNumber >= 1 && data.ayahNumber <= 286 &&
+             (!('surahName' in data) || (data.surahName is string && data.surahName.size() <= 100)) &&
+             (!('note' in data) || (data.note is string && data.note.size() <= 1000)) &&
+             data.createdAt is timestamp && data.createdAt <= request.time;
+    }
+
+    // User Scoped Data Collections
+    match /users/{userId} {
+      // Notes Subcollection
+      match /notes/{noteId} {
+        allow get: if isSignedIn() && request.auth.uid == userId && isValidId(noteId);
+        allow list: if isSignedIn() && request.auth.uid == userId;
+
+        allow create: if isSignedIn() &&
+                         request.auth.uid == userId &&
+                         isValidId(noteId) &&
+                         incoming().userId == request.auth.uid &&
+                         incoming().keys().hasAll(['userId', 'title', 'content', 'createdAt', 'updatedAt']) &&
+                         isValidNote(incoming());
+
+        allow update: if isSignedIn() &&
+                         request.auth.uid == userId &&
+                         isValidId(noteId) &&
+                         incoming().userId == existing().userId &&
+                         incoming().createdAt == existing().createdAt &&
+                         isValidNote(incoming()) &&
+                         incoming().diff(existing()).affectedKeys().hasOnly([
+                           'title', 'content', 'category', 'surahNumber',
+                           'ayahStart', 'ayahEnd', 'tags', 'arabicSnippet',
+                           'translationSnippet', 'mindMapId', 'updatedAt'
+                         ]);
+
+        allow delete: if isSignedIn() && request.auth.uid == userId && isValidId(noteId);
+      }
+
+      // Mind Maps Subcollection
+      match /mindmaps/{mindmapId} {
+        allow get: if isSignedIn() && request.auth.uid == userId && isValidId(mindmapId);
+        allow list: if isSignedIn() && request.auth.uid == userId;
+
+        allow create: if isSignedIn() &&
+                         request.auth.uid == userId &&
+                         isValidId(mindmapId) &&
+                         incoming().userId == request.auth.uid &&
+                         incoming().keys().hasAll(['userId', 'title', 'nodesJson', 'edgesJson', 'createdAt', 'updatedAt']) &&
+                         isValidMindMap(incoming());
+
+        allow update: if isSignedIn() &&
+                         request.auth.uid == userId &&
+                         isValidId(mindmapId) &&
+                         incoming().userId == existing().userId &&
+                         incoming().createdAt == existing().createdAt &&
+                         isValidMindMap(incoming()) &&
+                         incoming().diff(existing()).affectedKeys().hasOnly([
+                           'title', 'description', 'surahNumber', 'nodesJson', 'edgesJson', 'updatedAt'
+                         ]);
+
+        allow delete: if isSignedIn() && request.auth.uid == userId && isValidId(mindmapId);
+      }
+
+      // Bookmarks Subcollection
+      match /bookmarks/{bookmarkId} {
+        allow get: if isSignedIn() && request.auth.uid == userId && isValidId(bookmarkId);
+        allow list: if isSignedIn() && request.auth.uid == userId;
+
+        allow create: if isSignedIn() &&
+                         request.auth.uid == userId &&
+                         isValidId(bookmarkId) &&
+                         incoming().userId == request.auth.uid &&
+                         incoming().keys().hasAll(['userId', 'surahNumber', 'ayahNumber', 'createdAt']) &&
+                         isValidBookmark(incoming());
+
+        allow update: if isSignedIn() &&
+                         request.auth.uid == userId &&
+                         isValidId(bookmarkId) &&
+                         incoming().userId == existing().userId &&
+                         incoming().createdAt == existing().createdAt &&
+                         isValidBookmark(incoming()) &&
+                         incoming().diff(existing()).affectedKeys().hasOnly([
+                           'surahNumber', 'ayahNumber', 'surahName', 'note'
+                         ]);
+
+        allow delete: if isSignedIn() && request.auth.uid == userId && isValidId(bookmarkId);
+      }
+    }
+  }
+}

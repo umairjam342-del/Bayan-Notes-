@@ -1,0 +1,6 @@
+{
+  "name": "Bayan Notes",
+  "description": "Quran study, rich text tafsir notes, mind mapping studio, and theological research.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

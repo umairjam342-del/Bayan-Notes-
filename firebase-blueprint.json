@@ -1,0 +1,75 @@
+{
+  "entities": {
+    "Note": {
+      "title": "Study Note",
+      "description": "A Quran study, tafsir, or theological research note created by a user.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Document ID" },
+        "userId": { "type": "string", "description": "Owner user UID" },
+        "title": { "type": "string", "description": "Note title" },
+        "content": { "type": "string", "description": "Rich text markdown and study commentary" },
+        "surahNumber": { "type": "integer", "description": "Surah index 1-114 (0 for general)" },
+        "ayahStart": { "type": "integer", "description": "Starting ayah number (0 for full surah/general)" },
+        "ayahEnd": { "type": "integer", "description": "Ending ayah number" },
+        "category": { "type": "string", "description": "Study category: tafsir, tadabbur, linguistics, theology, asbab_nuzul, general" },
+        "tags": {
+          "type": "array",
+          "description": "Thematic tags associated with this study note"
+        },
+        "arabicSnippet": { "type": "string", "description": "Selected Arabic text excerpt" },
+        "translationSnippet": { "type": "string", "description": "Selected English translation excerpt" },
+        "mindMapId": { "type": "string", "description": "Optional linked Mind Map ID" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Creation timestamp via serverTimestamp()" },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "Last update timestamp via serverTimestamp()" }
+      },
+      "required": ["userId", "title", "content", "category", "createdAt", "updatedAt"]
+    },
+    "MindMap": {
+      "title": "Thematic Mind Map",
+      "description": "An interactive conceptual mind map for Quranic themes, structural relations, and theological connections.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Document ID" },
+        "userId": { "type": "string", "description": "Owner user UID" },
+        "title": { "type": "string", "description": "Mind map title" },
+        "description": { "type": "string", "description": "Brief description of the thematic map" },
+        "surahNumber": { "type": "integer", "description": "Associated Surah number (0 if cross-surah topic)" },
+        "nodesJson": { "type": "string", "description": "Serialized graph nodes with coordinates, labels, colors" },
+        "edgesJson": { "type": "string", "description": "Serialized graph connections with relationship types" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Creation timestamp via serverTimestamp()" },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "Last update timestamp via serverTimestamp()" }
+      },
+      "required": ["userId", "title", "nodesJson", "edgesJson", "createdAt", "updatedAt"]
+    },
+    "Bookmark": {
+      "title": "Ayah Bookmark",
+      "description": "A saved Quran verse reference with user bookmark annotation.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Document ID" },
+        "userId": { "type": "string", "description": "Owner user UID" },
+        "surahNumber": { "type": "integer", "description": "Surah index 1-114" },
+        "ayahNumber": { "type": "integer", "description": "Ayah index" },
+        "surahName": { "type": "string", "description": "Surah name" },
+        "note": { "type": "string", "description": "Short bookmark reflection" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Creation timestamp via serverTimestamp()" }
+      },
+      "required": ["userId", "surahNumber", "ayahNumber", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}/notes/{noteId}": {
+      "schema": "Note",
+      "description": "Private study and tafsir notes scoped to the authenticated user."
+    },
+    "/users/{userId}/mindmaps/{mindmapId}": {
+      "schema": "MindMap",
+      "description": "Private thematic mind maps scoped to the authenticated user."
+    },
+    "/users/{userId}/bookmarks/{bookmarkId}": {
+      "schema": "Bookmark",
+      "description": "Saved ayah bookmarks scoped to the authenticated user."
+    }
+  }
+}
